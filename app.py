@@ -33,23 +33,46 @@ y_train = np.random.rand(100) * 5000  # Replace with your actual target values
 knn_regressor = KNNRegressor(k=5)
 knn_regressor.fit(X_train, y_train)
 
+# Function to calculate background features
+def calculate_background_features(year_built, zipcode, house_age):
+    # Calculate year_sqrt, zipcode_mean_price, and inverse_house_age
+    year_sqrt = np.sqrt(year_built)
+    
+    # Dummy mapping of zipcode_mean_price (this should be calculated from actual data)
+    zipcode_mean_price = 2000  # Replace with actual calculation based on dataset
+    
+    # Calculate inverse_house_age, ensuring no division by zero
+    inverse_house_age = 1 / house_age if house_age != 0 else 0
+    
+    return year_sqrt, zipcode_mean_price, inverse_house_age
+
 # Function to predict the rental price
 def predict_rental_price():
     try:
         # Extract the feature values entered by the user
+        sqrt_ft = float(entry_sqrt_ft.get())
+        year_built = int(entry_year_built.get())
+        zipcode = int(entry_zipcode.get())
+        lot_acres = float(entry_lot_acres.get())
+        latitude = float(entry_latitude.get())
+        longitude = float(entry_longitude.get())
+        taxes = float(entry_taxes.get())
+        bedrooms = int(entry_bedrooms.get())
+        bathrooms = int(entry_bathrooms.get())
+        fireplaces = int(entry_fireplaces.get())
+        garage = int(entry_garage.get())
+
+        # Calculate the age of the house
+        current_year = 2024  # Replace with dynamic year if needed
+        house_age = current_year - year_built
+
+        # Calculate the background features
+        year_sqrt, zipcode_mean_price, inverse_house_age = calculate_background_features(year_built, zipcode, house_age)
+
+        # Combine all features into a single array
         features = [
-            float(entry_sqrt_ft.get()),
-            float(entry_year_sqrt.get()),
-            float(entry_zipcode_mean_price.get()),
-            float(entry_lot_acres.get()),
-            float(entry_latitude.get()),
-            float(entry_longitude.get()),
-            float(entry_taxes.get()),
-            float(entry_inverse_house_age.get()),
-            float(entry_bedrooms.get()),
-            float(entry_bathrooms.get()),
-            float(entry_fireplaces.get()),
-            float(entry_garage.get())
+            sqrt_ft, year_sqrt, zipcode_mean_price, lot_acres, latitude, 
+            longitude, taxes, inverse_house_age, bedrooms, bathrooms, fireplaces, garage
         ]
 
         # Reshape input for prediction
@@ -64,10 +87,9 @@ def predict_rental_price():
     except ValueError:
         messagebox.showerror("Input Error", "Please enter valid numeric values.")
 
-# Labels and Entry fields configuration
-labels = ["Square Footage (sqrt_ft)", "Year Sqrt", "Zipcode Mean Price", "Lot Acres", 
-          "Latitude", "Longitude", "Taxes", "Inverse House Age", "Bedrooms", 
-          "Bathrooms", "Fireplaces", "Garage"]
+# Labels and Entry fields for required features
+labels = ["Square Footage (sqrt_ft)", "Year Built", "Zipcode", "Lot Acres", 
+          "Latitude", "Longitude", "Taxes", "Bedrooms", "Bathrooms", "Fireplaces", "Garage"]
 
 entries = []
 
@@ -85,9 +107,9 @@ for i, label_text in enumerate(labels):
     entries.append(entry)
 
 # Mapping the entries for easy access
-entry_sqrt_ft, entry_year_sqrt, entry_zipcode_mean_price, entry_lot_acres, entry_latitude, \
-entry_longitude, entry_taxes, entry_inverse_house_age, entry_bedrooms, entry_bathrooms, \
-entry_fireplaces, entry_garage = entries
+entry_sqrt_ft, entry_year_built, entry_zipcode, entry_lot_acres, entry_latitude, \
+entry_longitude, entry_taxes, entry_bedrooms, entry_bathrooms, entry_fireplaces, \
+entry_garage = entries
 
 # Create the "PREDICT THE RENTAL PRICE" button
 predict_button = tk.Button(form_frame, text="PREDICT THE RENTAL PRICE", font=("Arial", 14), bg='#3498db', fg='white', 
