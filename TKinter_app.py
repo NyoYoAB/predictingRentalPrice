@@ -58,6 +58,7 @@ class KNNRegressor:
         self.y_train = y_train
 
     def predict(self, X_test):
+
         y_pred = [] 
         
         for x_test in X_test:
@@ -69,9 +70,11 @@ class KNNRegressor:
             
             # Get the target values of the k nearest neighbors
             k_nearest_targets = self.y_train[k_indices]
-            
+
             # Predict the target as the mean of the nearest neighbors' targets
             y_pred.append(np.mean(k_nearest_targets))
+
+            print(np.array(y_pred))
         
         return np.array(y_pred)
 
@@ -137,7 +140,7 @@ def predict_rental_price():
         bedrooms = min_max_scaling_value(bedrooms, min_vals["bedrooms"], max_vals["bedrooms"])
         bathrooms = min_max_scaling_value(bathrooms, min_vals["bathrooms"], max_vals["bathrooms"])
         fireplaces = min_max_scaling_value(fireplaces, min_vals["fireplaces"], max_vals["fireplaces"])
-        garage =      min_max_scaling_value(garage, min_vals["garage"], max_vals["garage"])
+        garage = min_max_scaling_value(garage, min_vals["garage"], max_vals["garage"])
 
         # Combine all features into a single array
         features = np.array([
@@ -145,21 +148,25 @@ def predict_rental_price():
             longitude, taxes, inverse_house_age, bedrooms, bathrooms, fireplaces, garage
         ])
 
+        print(features)
+
         # Reshape input for prediction
-        features = features.reshape(1, -1)
+        features = np.array(features).reshape(1, -1)
 
         # Make the prediction using the KNN model
         predicted_price = knn_regressor.predict(features)[0]
+
+        print(predicted_price)
 
         # Display the prediction result
         messagebox.showinfo("Prediction", f"The predicted rental price is: ${predicted_price:.2f}")
     
     except ValueError:
         messagebox.showerror("Input Error", "Please enter valid numeric values.")
-
+    
 # Labels and Entry fields for required features
 labels = ["Square Footage (sqrt_ft)", "Year Built", "Lot Acres", 
-          "Latitude", "Longitude", "Taxes", "Bedrooms", "Bathrooms", "Fireplaces", "Garage"]
+        "Latitude", "Longitude", "Taxes", "Bedrooms", "Bathrooms", "Fireplaces", "Garage"]
 
 entries = []
 
