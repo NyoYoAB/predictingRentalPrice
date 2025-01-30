@@ -4,28 +4,16 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-# Define a function for calculating minMaxScaling:
+# Define a function for scaling Train Data with minMaxScaling:
 def min_max_scaling(df, cols):
     for column in cols:
         df[column] = (df[column] - df[column].min()) / (df[column].max() - df[column].min())
     
     return df
 
-# Define a function for randomly splitting data into train and test:
-def train_test_random_spliter(df, train_size, seed_value=42):
-
-    # random value for split
-    np.random.seed(seed_value)
-    shuffled_indices = np.random.permutation(len(df))
-
-    # Define the split index
-    split_index = int(train_size * len(shuffled_indices))
-
-    # Create train and test sets by splitting the shuffled DataFrame
-    df_train = df.iloc[shuffled_indices[:split_index]]
-    df_test = df.iloc[shuffled_indices[split_index:]]
-
-    return df_train, df_test
+# Define a function for calculating minMaxScaling for input users:
+def min_max_scaling_value(value, min_value, max_value):
+    return (value - min_value) / (max_value - min_value)
 
 # Import Cleaned Dataset (Clean UP already done in previous section)
 cleaned_data = pd.read_csv("raw_house_data_cleaned.csv")
@@ -47,27 +35,17 @@ current_year = datetime.now().year
 cleaned_data['house_age'] = current_year - cleaned_data['year_built']
 cleaned_data['inverse_house_age'] = 1 / cleaned_data['house_age'].replace(0, 1)
 
-
 # Feature selections:
 selected_columns = ['rental_price', "sqrt_ft", "year_sqrt" , "lot_acres", "latitude" , "longitude" , 'taxes', "inverse_house_age" , "bedrooms", "bathrooms" ,"fireplaces", "garage"]
 rentalHouse_df = cleaned_data[selected_columns]
 
 # Scaling using the MinMax
-scaled_columns = ["sqrt_ft","taxes","lot_acres", "year_sqrt" , "latitude", "longitude", 'bedrooms', 'bathrooms', "fireplaces", "garage"]
+scaled_columns = ["sqrt_ft", "taxes", "lot_acres", "year_sqrt" , "latitude", "longitude", 'bedrooms', 'bathrooms', "fireplaces", "garage"]
 rentalHouse_df = min_max_scaling(rentalHouse_df, scaled_columns)
-rentalHouse_df.head()
+min_vals = rentalHouse_df[scaled_columns].min()
+max_vals = rentalHouse_df[scaled_columns].max()
 
-# Split Data into train and test datasets (allocating 80% for Trainning):
-df_train, df_test = train_test_random_spliter(rentalHouse_df, train_size=0.8)
-
-# Separate the train and test datasets into features and predictor
-X_train = df_train[selected_columns[1:]]
-y_train = df_train['rental_price']
-
-X_test = df_test[selected_columns[1:]]
-y_test = df_test['rental_price']
-
-
+# Define the KNN Regressor class
 class KNNRegressor:
 
     def __init__(self, k=5):
@@ -80,7 +58,6 @@ class KNNRegressor:
         self.y_train = y_train
 
     def predict(self, X_test):
-
         y_pred = [] 
         
         for x_test in X_test:
@@ -97,15 +74,28 @@ class KNNRegressor:
             y_pred.append(np.mean(k_nearest_targets))
         
         return np.array(y_pred)
-    
+
+# Split Data into train and test datasets (allocating 80% for Trainning):
+def train_test_random_spliter(df, train_size, seed_value=42):
+    np.random.seed(seed_value)
+    shuffled_indices = np.random.permutation(len(df))
+    split_index = int(train_size * len(shuffled_indices))
+    df_train = df.iloc[shuffled_indices[:split_index]]
+    df_test = df.iloc[shuffled_indices[split_index:]]
+    return df_train, df_test
+
+df_train, df_test = train_test_random_spliter(rentalHouse_df, train_size=0.8)
+
+# Separate the train and test datasets into features and predictor
+X_train = df_train[selected_columns[1:]]
+y_train = df_train['rental_price']
+
+X_test = df_test[selected_columns[1:]]
+y_test = df_test['rental_price']
+
 # Initialize and train the KNN model with k=5
 knn_regressor = KNNRegressor(k=5)
 knn_regressor.fit(X_train.values, y_train.values)
-
-# Predict on the test set
-y_pred_knn = knn_regressor.predict(X_test.values)
-
-
 
 # Creating the Tkinter window
 root = tk.Tk()
@@ -113,21 +103,15 @@ root.title("House Rental Price Predictor")
 root.geometry("500x600")
 root.configure(bg='#f4f4f4')
 
-
 # Function to calculate background features
-def calculate_background_features(year_built, house_age):
-    # Calculate year_sqrt, and inverse_house_age
-    year_sqrt = np.sqrt(year_built)
-    
-    # Calculate inverse_house_age, ensuring no division by zero
+def calculate_background_features(year_built, sqrt_ft, house_age):
+    year_sqrt = year_built * sqrt_ft
     inverse_house_age = 1 / house_age if house_age != 0 else 0
-    
     return year_sqrt, inverse_house_age
 
 # Function to predict the rental price
 def predict_rental_price():
     try:
-        # Extract the feature values entered by the user
         sqrt_ft = float(entry_sqrt_ft.get())
         year_built = int(entry_year_built.get())
         lot_acres = float(entry_lot_acres.get())
@@ -139,21 +123,30 @@ def predict_rental_price():
         fireplaces = int(entry_fireplaces.get())
         garage = int(entry_garage.get())
 
-        # Calculate the age of the house
-        current_year = datetime.now().year 
+        current_year = datetime.now().year
         house_age = current_year - year_built
+        year_sqrt, inverse_house_age = calculate_background_features(year_built, sqrt_ft, house_age)
 
-        # Calculate the background features
-        year_sqrt, inverse_house_age = calculate_background_features(year_built, house_age)
+        # Scale the input features:
+        sqrt_ft = min_max_scaling_value(sqrt_ft, min_vals["sqrt_ft"], max_vals["sqrt_ft"])
+        year_sqrt = min_max_scaling_value(year_sqrt, min_vals["year_sqrt"], max_vals["year_sqrt"])
+        lot_acres = min_max_scaling_value(lot_acres, min_vals["lot_acres"], max_vals["lot_acres"])
+        latitude = min_max_scaling_value(latitude, min_vals["latitude"], max_vals["latitude"])
+        longitude = min_max_scaling_value(longitude, min_vals["longitude"], max_vals["longitude"])
+        taxes = min_max_scaling_value(taxes, min_vals["taxes"], max_vals["taxes"])
+        bedrooms = min_max_scaling_value(bedrooms, min_vals["bedrooms"], max_vals["bedrooms"])
+        bathrooms = min_max_scaling_value(bathrooms, min_vals["bathrooms"], max_vals["bathrooms"])
+        fireplaces = min_max_scaling_value(fireplaces, min_vals["fireplaces"], max_vals["fireplaces"])
+        garage =      min_max_scaling_value(garage, min_vals["garage"], max_vals["garage"])
 
         # Combine all features into a single array
-        features = [
+        features = np.array([
             sqrt_ft, year_sqrt, lot_acres, latitude, 
             longitude, taxes, inverse_house_age, bedrooms, bathrooms, fireplaces, garage
-        ]
+        ])
 
         # Reshape input for prediction
-        features = np.array(features).reshape(1, -1)
+        features = features.reshape(1, -1)
 
         # Make the prediction using the KNN model
         predicted_price = knn_regressor.predict(features)[0]
@@ -170,7 +163,6 @@ labels = ["Square Footage (sqrt_ft)", "Year Built", "Lot Acres",
 
 entries = []
 
-# Creating a frame to center the form elements
 form_frame = tk.Frame(root, bg='#f4f4f4')
 form_frame.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -183,7 +175,6 @@ for i, label_text in enumerate(labels):
     
     entries.append(entry)
 
-# Mapping the entries for easy access
 entry_sqrt_ft, entry_year_built, entry_lot_acres, entry_latitude, \
 entry_longitude, entry_taxes, entry_bedrooms, entry_bathrooms, entry_fireplaces, \
 entry_garage = entries
